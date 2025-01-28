@@ -159,7 +159,7 @@ class NoisePatterns(object):
         y /= 2
 
         # get noise @ x^2,y^2 and interpolate between c1 and c2.
-        color = lerp(c1, c2, self.nms[self.noiseId].noise2d(x * x, y * y))
+        color = lerp(c1, c2, self.nms[self.noiseId].noise2d(x * 2, y * 2))
 
         # calc the radius about a midpoint (4,3)
         radius = np.sqrt((x - 4) ** 2 + (y - 3) ** 2) / 4

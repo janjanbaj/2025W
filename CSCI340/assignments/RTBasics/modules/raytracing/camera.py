@@ -2,11 +2,19 @@
 Author: Liz Matthews, Geoff Matthews
 """
 
+from numpy import cross, radians, tan
 from numpy.linalg import norm
 
-from CSCI340.assignments.RTBasics.modules.raytracing.ray import Ray
+from .ray import Ray
 
-from ..utils.vector import lerp, vec
+from ..utils.vector import lerp, normalize, vec
+
+from enum import Enum
+
+
+class ProjectionType(Enum):
+    Perspective = 1
+    Orthographic = 2
 
 
 class Camera(object):
@@ -18,7 +26,7 @@ class Camera(object):
 
     def set(
         self,
-        focus=vec(0, 0, 0),
+        focus=vec(0, 0.2, 0),
         fwd=vec(0, 0, -1),
         up=vec(0, 1, 0),
         fov=90.0,
@@ -27,12 +35,23 @@ class Camera(object):
     ):
         """Sets up the camera given the parameters.
         Calculates position, ul, ur, ll, and lr."""
+        # as per the slides
+        fwd = normalize(fwd)
+        up = normalize(up)
+        right = normalize(cross(fwd, up))
+        up = normalize(cross(right, fwd))
 
-        self.position = vec(0, 0, 0)
-        self.ul = vec(0, 0, 0)
-        self.ur = vec(0, 0, 0)
-        self.ll = vec(0, 0, 0)
-        self.lr = vec(0, 0, 0)
+        # half because top down view
+        width = 2 * distance * tan(radians(fov) / 2)
+        height = width / aspect
+
+        center = focus
+        self.position = focus - distance * fwd
+
+        self.ul = center + height / 2 * up - (width / 2) * right
+        self.ur = center + height / 2 * up + (width / 2) * right
+        self.ll = center - height / 2 * up - (width / 2) * right
+        self.lr = center - height / 2 * up + (width / 2) * right
 
     def __init__(
         self,
@@ -45,13 +64,15 @@ class Camera(object):
     ):
         self.set(focus, fwd, up, fov, distance, aspect)
 
-    def getRay(self, xPercent, yPercent):
+    def getRay(self, xPercent, yPercent, projection=ProjectionType.Perspective):
         """Returns a ray based on a percentage for the x and y coordinate."""
         p0 = lerp(self.ul, self.ur, xPercent)
-        p1 = lerp(self.ll, self.lr, yPercent)
-        worldPos = lerp(p0, p1, yPercent)
-
-        return Ray(worldPos, worldPos - self.position)
+        p1 = lerp(self.ll, self.lr, xPercent)
+        rayEndPoint = lerp(p0, p1, yPercent)
+        if projection == ProjectionType.Perspective:
+            return Ray(self.position, rayEndPoint - self.position)
+        else:
+            return Ray(self.position, rayEndPoint)
 
     def getPosition(self):
         """Getter method for position."""

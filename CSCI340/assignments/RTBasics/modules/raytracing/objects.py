@@ -5,6 +5,9 @@ Author: Liz Matthews, Geoff Matthews
 import numpy as np
 from abc import ABC, abstractmethod
 
+from .ray import Ray
+from ..utils.vector import normalize, vec
+
 
 class Object3D(ABC):
     """Abstract base class for all objects in the raytraced scene.
@@ -49,3 +52,46 @@ class Object3D(ABC):
     def getNormal(self, intersection):
         """Find the normal for the given object. Must override."""
         pass
+
+
+class Sphere(Object3D):
+    def __init__(self, radius, pos, material):
+        super().__init__(pos, material)
+        self.radius = radius
+
+    def intersect(self, ray: Ray):
+        p = ray.position - self.position
+        v = ray.direction
+
+        b = 2 * (p.dot(v))
+        c = p.dot(p) - self.radius * self.radius
+
+        # discriminant b^2-4ac
+        disc = (b * b) - (4 * c)
+
+        # sqrt_discriminant for calculations
+        sqrt_disc = np.sqrt(np.maximum(0, disc))
+
+        # plus-minus
+        sol_1 = (-b - sqrt_disc) / 2
+        sol_2 = (-b + sqrt_disc) / 2
+
+        # the following is an optimization on the if conditions. we first check if the subtracted solution that is sol_1 is negative, if so we will pick the other one which we deal with later. if sol1 is smaller than sol2, pick sol1 because it is closer
+        hit_point = np.where((sol_1 > 0) & (sol_2 > sol_1), sol_1, sol_2)
+        # if discriminant is non zero then there is for sure an intersection. if not then we did not hit the sphere. if the hit point is not positive then we basically hit it tangentially and can return inf
+        hit_bool = (disc > 0) & (hit_point > 0)
+        return np.where(hit_bool, hit_point, np.inf)
+
+    # numpy wizardy must commence:
+
+    def getNormal(self, intersection):
+        return normalize(vec(intersection - self.position))
+
+
+# class Plane(Object3D):
+#    def __init__(self, normal: vec, pos, material):
+#        super().__init__(pos, material)
+#        self.normal = normal
+#
+#    def intersect(self, ray):
+#

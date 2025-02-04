@@ -20,20 +20,20 @@ class Material(object):
 
     def getAmbient(self):
         """Getter method for ambient color."""
-        return self.ambient
+        return vec(self.ambient)
 
     def getDiffuse(self):
         """Getter method for diffuse color."""
-        return self.diffuse
+        return vec(self.diffuse)
 
     def getSpecular(self):
         """Getter method for specular color."""
-        return self.specular
+        return vec(self.specular)
 
     def getShine(self):
         """Getter method for shininess factor."""
-        return self.shine
+        return vec(self.shine)
 
     def getSpecularCoefficient(self):
         """Getter method for specular coefficient."""
-        return self.specCoeff
+        return vec(self.specCoeff)

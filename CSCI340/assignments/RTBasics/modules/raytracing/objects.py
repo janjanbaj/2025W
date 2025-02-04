@@ -66,10 +66,12 @@ class Sphere(Object3D):
         b = 2 * (p.dot(v))
         c = p.dot(p) - self.radius * self.radius
 
+        # numpy wizardy commences:
+
         # discriminant b^2-4ac
         disc = (b * b) - (4 * c)
 
-        # sqrt_discriminant for calculations
+        # sqrt_discriminant for calculations. if disc is lt 0 then disc is zero.
         sqrt_disc = np.sqrt(np.maximum(0, disc))
 
         # plus-minus
@@ -81,8 +83,6 @@ class Sphere(Object3D):
         # if discriminant is non zero then there is for sure an intersection. if not then we did not hit the sphere. if the hit point is not positive then we basically hit it tangentially and can return inf
         hit_bool = (disc > 0) & (hit_point > 0)
         return np.where(hit_bool, hit_point, np.inf)
-
-    # numpy wizardy must commence:
 
     def getNormal(self, intersection):
         return normalize(vec(intersection - self.position))

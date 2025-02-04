@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
+from ..utils.vector import normalize
+
 
 class AbstractLight(ABC):
     def __init__(self, color):
@@ -27,7 +29,7 @@ class PointLight(AbstractLight):
         self.point = np.array(point)
 
     def getVectorToLight(self, point):
-        return self.point - np.array(point)
+        return normalize(self.point - np.array(point))
 
     def getDistance(self, point):
         return np.linalg.norm(point - self.point)
@@ -42,4 +44,4 @@ class DirectionalLight(AbstractLight):
         return self.ray * -1
 
     def getDistance(self):
-        return 0
+        return np.inf

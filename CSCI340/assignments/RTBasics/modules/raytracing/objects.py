@@ -60,6 +60,10 @@ class Sphere(Object3D):
         self.radius = radius
 
     def intersect(self, ray: Ray):
+        # Citations/References:
+        # https://stackoverflow.com/questions/28081247/print-real-roots-only-in-numpy
+        # https://numpy.org/doc/2.2/reference/generated/numpy.where.html
+        # https://stackoverflow.com/questions/59801341/how-to-use-np-max-for-empty-numpy-array-without-valueerror-zero-size-array-to-r
         p = ray.position - self.position
         v = ray.direction
 

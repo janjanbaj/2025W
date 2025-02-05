@@ -102,4 +102,4 @@ class Plane(Object3D):
         )
 
     def getNormal(self, intersection):
-        return self.normal * intersection
+        return self.normal

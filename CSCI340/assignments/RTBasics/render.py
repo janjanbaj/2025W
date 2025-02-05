@@ -13,6 +13,7 @@ from pygame.locals import *
 from enum import Enum
 from abc import ABC, abstractmethod
 
+
 class ShowTypes(Enum):
     """Control for how the progressive pixel renderer shows images.
     More showing will be slower, NoShow doesn't show the image until
@@ -24,8 +25,10 @@ class ShowTypes(Enum):
     FinalShow = 3
     NoShow = 4
 
+
 class ProgressiveRenderer(ABC):
-    """Abstract base class for renderers."""       
+    """Abstract base class for renderers."""
+
     @classmethod
     def main(cls, caption="Renderer"):
         """General main loop for the progressive renderer.
@@ -34,7 +37,7 @@ class ProgressiveRenderer(ABC):
         # Initialize Pygame
         pygame.init()
 
-        # Set up renderer        
+        # Set up renderer
         cls.renderer = cls()
         cls.renderer.startPygame(caption)
         cls.stepper = cls.renderer.render()
@@ -50,23 +53,25 @@ class ProgressiveRenderer(ABC):
         cls.stepper.close()
         cls.renderer.restartRender()
         cls.stepper = cls.renderer.render()
-        
-    def __init__(self, width=640, height=480,
-                 showTime=True,
-                 show=ShowTypes.PerColumn,
-                 minimumPixel=0,
-                 startPixelSize=256): 
-            
+
+    def __init__(
+        self,
+        width=640,
+        height=480,
+        showTime=True,
+        show=ShowTypes.PerColumn,
+        minimumPixel=0,
+        startPixelSize=256,
+    ):
         self.width = width
         self.height = height
         self.showTime = showTime
-        self.minimumPixel = minimumPixel        
+        self.minimumPixel = minimumPixel
         self.screen = None
         self.fillColor = (64, 128, 255)
-        
-     
+
         self.show = show
-        
+
         if self.show in [ShowTypes.NoShow, ShowTypes.FinalShow]:
             self.startPixelSize = max(1, minimumPixel * 2)
         else:
@@ -75,12 +80,12 @@ class ProgressiveRenderer(ABC):
             self.fileName = input("File name?: ")
         else:
             self.fileName = None
-    
+
     @abstractmethod
     def getColor(self, x, y):
         """Must return a color in a np.array()"""
-        return np.array((0,0,255))
-    
+        return np.array((0, 0, 255))
+
     def handleExitInput(self, event):
         """For exiting the program."""
         if event.type == QUIT:
@@ -110,33 +115,33 @@ class ProgressiveRenderer(ABC):
             self.handleOtherInput(event)
 
     def save(self):
-        pygame.event.set_blocked(KEYDOWN|KEYUP)
+        pygame.event.set_blocked(KEYDOWN | KEYUP)
         fname = input("File name?:  ")
         pygame.event.set_blocked(0)
-        pygame.image.save(self.image,os.path.join("images",fname))
+        pygame.image.save(self.image, os.path.join("images", fname))
 
     def startPygame(self, caption):
         if self.show != ShowTypes.NoShow:
             self.screen = pygame.display.set_mode((self.width, self.height))
             pygame.display.set_caption(caption)
-            
+
         else:
             self.screen = None
 
-        #Create the image
-        self.image = pygame.Surface((self.width,
-                                     self.height))
+        # Create the image
+        self.image = pygame.Surface((self.width, self.height))
         self.image.fill(self.fillColor)
 
-        #Prepare Game Objects
+        # Prepare Game Objects
         self.clock = pygame.time.Clock()
-        
+
         # Start rendering
         self.restartRender()
 
     def isRunning(self):
-        return not self.handleInput() and \
-               not (self.done and self.show == ShowTypes.NoShow)
+        return not self.handleInput() and not (
+            self.done and self.show == ShowTypes.NoShow
+        )
 
     def restartRender(self):
         self.pixelSize = self.startPixelSize
@@ -148,10 +153,9 @@ class ProgressiveRenderer(ABC):
         self.clock.tick(fps)
         if self.show != ShowTypes.NoShow:
             # Draw background into screen and show
-            self.screen.blit(self.image, (0,0))
+            self.screen.blit(self.image, (0, 0))
             pygame.display.flip()
-         
-        
+
     def render(self):
         """The main loop of rendering the image.
         Will create pixels of progressively smaller sizes. Stops rendering
@@ -178,8 +182,7 @@ class ProgressiveRenderer(ABC):
                     # Get color
                     color = self.getColor(x, y) * 255
 
-                    self.image.fill(color, ((x, y), (self.pixelSize,
-                                                     self.pixelSize)))
+                    self.image.fill(color, ((x, y), (self.pixelSize, self.pixelSize)))
 
                     if self.show == ShowTypes.PerPixel:
                         self.showProgress(256 * 60 // self.pixelSize)
@@ -188,7 +191,6 @@ class ProgressiveRenderer(ABC):
 
                 if self.show == ShowTypes.PerColumn:
                     self.showProgress(60)
-
 
             # Reduce pixel size
             self.pixelSize //= 2
@@ -204,12 +206,11 @@ class ProgressiveRenderer(ABC):
         print()
 
         print(f"Completed in {(endTime - startTime):.4f} seconds", flush=True)
-            
+
         if self.show == ShowTypes.FinalShow:
             self.showProgress(30)
-            
+
         elif self.show == ShowTypes.NoShow:
-            pygame.image.save(self.image,os.path.join("images", self.fileName))
-            
+            pygame.image.save(self.image, os.path.join("images", self.fileName))
 
         yield

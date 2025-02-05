@@ -38,11 +38,15 @@ class RayTracer(ProgressiveRenderer):
 
         for l in self.scene.lights:
             light_vector = l.getVectorToLight(intersection)
-            if self.scene.shadowed(obj, Ray(l.point, -light_vector)) != np.inf:
+
+            if self.scene.shadowed(obj, Ray(l.point, -light_vector)) > l.getDistance(
+                intersection
+            ):
+                # only do this if not blocked
                 diffuse = (obj.getDiffuse() - color) * np.dot(
                     object_normal, light_vector
                 )
-                # only do this if not blocked
+
                 color += diffuse
                 reflection_vector = normalize(light_vector - ray.direction)
 
@@ -50,7 +54,9 @@ class RayTracer(ProgressiveRenderer):
                     (np.dot(reflection_vector, object_normal) ** obj.getShine())
                     * obj.getSpecularCoefficient()
                 )
+
                 color += specular
+
         return color
 
         # return (

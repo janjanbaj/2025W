@@ -68,7 +68,7 @@ class Scene(object):
         minDistance = np.inf
 
         for i in range(len(distances)):
-            if distances[i] is not None and distances[i] < minDistance:
+            if distances[i] < minDistance:
                 nearestObj = self.objects[i]
                 minDistance = distances[i]
 

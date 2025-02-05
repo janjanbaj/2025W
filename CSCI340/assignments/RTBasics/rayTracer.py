@@ -19,8 +19,6 @@ class RayTracer(ProgressiveRenderer):
         self.scene = Scene(aspect=width / height, fov=45)
 
     def getColorR(self, ray: Ray):
-        # Start with zero color
-
         # Find any objects it collides with and calculate color
         obj, distance_to_obj = self.scene.nearestObject(ray)
 
@@ -39,12 +37,12 @@ class RayTracer(ProgressiveRenderer):
         for l in self.scene.lights:
             light_vector = l.getVectorToLight(intersection)
 
-            if self.scene.shadowed(obj, Ray(l.point, -light_vector)) > l.getDistance(
+            if self.scene.shadowed(obj, Ray(l.point, -light_vector)) >= l.getDistance(
                 intersection
             ):
                 # only do this if not blocked
-                diffuse = (obj.getDiffuse() - color) * np.dot(
-                    object_normal, light_vector
+                diffuse = (obj.getDiffuse() - color) * max(
+                    np.dot(object_normal, light_vector), 1e-13
                 )
 
                 color += diffuse

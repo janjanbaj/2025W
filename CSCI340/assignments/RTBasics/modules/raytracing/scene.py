@@ -4,7 +4,7 @@ Author: Liz Matthews, Geoff Matthews
 
 import numpy as np
 
-from .objects import Sphere
+from .objects import Sphere, Plane
 from .camera import Camera
 from ..utils.vector import vec
 from .materials import Material
@@ -29,6 +29,18 @@ class Scene(object):
         # Set up lights, spheres,  and planes here
         light = PointLight(vec(1, 3, 0), vec(1, 1, 1))
 
+        plane = Plane(
+            vec(0, 1, 0),
+            vec(0, -1, 0),
+            Material(
+                vec(0.3, 0.3, 0.3),
+                vec(0.7, 0.7, 0.7),
+                vec(1, 1, 1),
+                5,
+                0.1,
+            ),
+        )
+
         sphere1 = Sphere(
             0.7,
             vec(0, 1, -3),
@@ -45,7 +57,7 @@ class Scene(object):
             Material(vec(0.4, 0.2, 0.2), vec(1.0, 0.2, 0.2), (1, 0.8, 0.8), 100, 1.0),
         )
 
-        self.objects = [sphere3, sphere1, sphere2]
+        self.objects = [sphere3, sphere1, sphere2, plane]
         self.lights = [light]
         self.camera = Camera(focus, direction, up, fov, distance, aspect)
 

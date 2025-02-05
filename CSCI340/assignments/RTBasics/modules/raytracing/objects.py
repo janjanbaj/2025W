@@ -88,10 +88,18 @@ class Sphere(Object3D):
         return normalize(vec(intersection - self.position))
 
 
-# class Plane(Object3D):
-#    def __init__(self, normal: vec, pos, material):
-#        super().__init__(pos, material)
-#        self.normal = normal
-#
-#    def intersect(self, ray):
-#
+class Plane(Object3D):
+    def __init__(self, normal, pos, material):
+        super().__init__(pos, material)
+        self.normal = normalize(normal)
+
+    def intersect(self, ray):
+        dot = np.dot(ray.direction, self.normal)
+        if dot > 0.000000001:
+            return np.inf
+        return ((self.position - ray.position).dot(self.normal)) / (
+            ray.direction.dot(self.normal)
+        )
+
+    def getNormal(self, intersection):
+        return self.normal * intersection

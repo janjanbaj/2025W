@@ -44,4 +44,4 @@ class DirectionalLight(AbstractLight):
         return self.ray * -1
 
     def getDistance(self):
-        return np.inf
+        return 0

@@ -72,11 +72,11 @@ class Sphere(Object3D):
 
         # funky numpy magic. dont know if it is necessarily faster than what I have commented out below
         # is kinda straight forward
-        ans = np.roots([1, b, c])
+        # ans = np.roots([1, b, c])
 
-        # np.min will scream at if your input is an empty list unless you pass in an initial value which
-        # it will default to.
-        return np.min(ans[np.isreal(ans)], initial=np.inf)
+        ## np.min will scream at if your input is an empty list unless you pass in an initial value which
+        ## it will default to.
+        # return np.min(ans[np.isreal(ans)], initial=np.inf)
 
         # discriminant b^2-4ac
         disc = (b * b) - (4 * c)

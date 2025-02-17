@@ -11,6 +11,31 @@ from ..utils.definitions import EPSILON
 
 from .ray import Ray
 from ..utils.vector import normalize, rotate, vec
+from numpy import cos, sin
+
+
+def rotZ(x, y, z, theta):
+    return (x * cos(theta) - y * sin(theta), x * sin(theta) + y * cos(theta), z)
+
+
+def rotY(x, y, z, theta):
+    return (x * cos(theta) - z * sin(theta), y, x * sin(theta) + z * cos(theta))
+
+
+def rotX(x, y, z, theta):
+    return (x, y * cos(theta) - z * sin(theta), y * sin(theta) + z * cos(theta))
+
+
+def rot(x, y, z, xa, ya, za):
+    rXx, rXy, rXz = rotX(x, y, z, xa)
+    rYx, rYy, rYz = rotY(rXx, rXy, rXz, ya)
+    return rotZ(rYx, rYy, rYz, za)
+
+
+def invR(x, y, z, xa, ya, za):
+    rZx, rZy, rZz = rotZ(x, y, z, -za)
+    rYx, rYy, rYz = rotY(rZx, rZy, rZz, -ya)
+    return rotX(rYx, rYy, rYz, -xa)
 
 
 class Object3D(ABC):
@@ -112,26 +137,37 @@ class Plane(Object3D):
 
     def intersect(self, ray):
         dot = np.dot(ray.direction, self.normal)
-        if dot > 0.000000001:
-            return np.inf
-        return ((self.position - ray.position).dot(self.normal)) / (
+        # if abs(dot) > 0.000000001:
+        # return np.inf
+        intersect = ((self.position - ray.position).dot(self.normal)) / (
             ray.direction.dot(self.normal)
         )
+        if abs(intersect) > EPSILON:
+            return intersect
+        return np.inf
 
     def getNormal(self, intersection):
         return self.normal
 
 
 class Ellipsoids(Object3D):
-    def __init__(self, radius, pos, stretch, normal, material):
+    def __init__(self, radius, pos, stretch, angle, material):
         super().__init__(pos, material)
         self.stretch = np.array(stretch)
-        self.normal = normal
+        self.angle = np.array(angle)
         self.radius = radius
 
     def intersect(self, ray: Ray):
         p = ray.position - self.position
-        v = ray.direction
+        p = invR(p[0], p[1], p[2], self.angle[0], self.angle[1], self.angle[2])
+        v = invR(
+            ray.direction[0],
+            ray.direction[1],
+            ray.direction[2],
+            self.angle[0],
+            self.angle[1],
+            self.angle[2],
+        )
         s = self.stretch
 
         vs = v / s
@@ -153,9 +189,27 @@ class Ellipsoids(Object3D):
         return np.where(hit_bool, hit_point, np.inf)
 
     def getNormal(self, intersection):
+        ax, ay, az = self.angle
+        x, y, z = np.array(intersection - self.position)
+        x, y, z = invR(x, y, z, ax, ay, az)
+        x, y, z = np.array(
+            [
+                2 * [x, y, z][i] / ((self.radius**2) * (self.stretch[i] ** 2))
+                for i in range(3)
+            ]
+        )
+        # derivative = [
+        #    2
+        #    * (intersection[i] - self.position[i])
+        #    / ((self.radius**2) * (self.stretch[i] ** 2))
+        #    for i in range(3)
+        # ]
+        # return normalize(derivative)
+        return normalize(rot(x, y, z, ax, ay, az))
+
         normal = np.array(
             [
-                (2 * (intersection[i] - self.position[i]))
+                (2 * intersection[i] - self.position[i])
                 / ((self.radius**2) * (self.stretch[i] ** 2))
                 for i in range(3)
             ]
@@ -164,18 +218,18 @@ class Ellipsoids(Object3D):
 
 
 class Cube(Object3D):
-    def __init__(self, pos, normal, length, material):
+    def __init__(self, pos, forward, up, length, material):
         super().__init__(pos, material)
-        self.normal = normal
         self.last_intersection = None
-
         hl = length / 2
         self.length = length
+        self.max_bounds = np.array([pos[i] + length / 2 for i in range(3)])
+        self.min_bounds = np.array([pos[i] - length / 2 for i in range(3)])
 
         # Create orthogonal basis
-        z_axis = normalize(normal)
-        x_axis = normalize(normal[::-1])
-        y_axis = normalize(x_axis * z_axis)
+        z_axis = normalize(up)
+        y_axis = normalize(np.cross(up, forward))
+        x_axis = normalize(forward)
 
         self.planes = [
             Plane(x_axis, pos + x_axis * hl, material),
@@ -188,24 +242,19 @@ class Cube(Object3D):
 
     def intersect(self, ray: Ray):
         entries = []
-        exits = []
-        maxEntry = -1
+        maxEntry = -np.inf
         minExit = np.inf
-        mae = -1
 
         for surface in self.planes:
             # does the ray intersect with the given plane
             intersect = surface.intersect(ray)
-
+            intersect_point = ray.getPositionAt(intersect)
             # if it doesnt we dont need to do the follows
             if intersect == np.inf:
                 continue
-
             # check if exiting
-            if surface.getNormal(intersect).dot(ray.direction) + EPSILON > 0:
+            if surface.getNormal(intersect).dot(ray.direction) > EPSILON:
                 # if exiting add to exit
-                exits.append(intersect)
-
                 if intersect < minExit:
                     minExit = intersect
             else:
@@ -213,14 +262,13 @@ class Cube(Object3D):
                 if intersect > maxEntry:
                     maxEntry = intersect
                     self.last_intersection = surface
-                    mae = len(entries) - 1
 
-        if len(entries) == 0 or mae == -1:
+        if len(entries) == 0:
             return np.inf
         if maxEntry < minExit:
-            return entries[mae]
+            return maxEntry
 
         return np.inf
 
     def getNormal(self, intersection):
-        return self.last_intersection.normal
+        return self.last_intersection.getNormal(intersection)

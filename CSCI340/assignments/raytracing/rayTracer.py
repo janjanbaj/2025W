@@ -5,7 +5,7 @@ Author: Liz Matthews, Geoff Matthews
 import numpy as np
 import pygame
 
-from modules.utils.definitions import COLORS
+from modules.utils.definitions import COLORS, EPSILON
 from modules.utils.noise import NoisePatterns
 from render import ProgressiveRenderer, ShowTypes
 
@@ -39,25 +39,26 @@ class RayTracer(ProgressiveRenderer):
         nm = NoisePatterns()
 
         cube1 = Cube(
-            vec(-1.3, 1.4, -4),
-            vec(0, 0, 1),
-            0.02,
-            Material(vec(0.2, 0.2, 0.4), vec(0.2, 0.2, 1), (0.8, 0.8, 1), 5, 0.1),
+            vec(2, 1, -3),
+            vec(0, 1, 3),
+            vec(1, 0, 0),
+            0.89,
+            Material(vec(0.4, 0.2, 0.2), vec(1.0, 0.2, 0.2), (1, 0.8, 0.8), 100, 1.0),
         )
         ellipsoid = Ellipsoids(
             0.4,
             vec(-1.3, 1.4, -4),
             vec(1.58, 1, 1),
-            vec(0.1, 0.2, 0.3),
-            Material(vec(0.2, 0.4, 0.2), vec(0.2, 1, 0.2), (0.8, 1, 0.8), 100, 1.0),
+            vec(1, 0.2, 0.3),
+            Material(vec(0.4, 0.2, 0.2), vec(1.0, 0.2, 0.2), (1, 0.8, 0.8), 100, 1.0),
         )
         sphere1 = SphereTextured3D(
             0.7,
             vec(0, 1, -3),
             Material3D(
-                nm.clouds3D,
-                COLORS["blue"],
-                COLORS["blue"] * 1.10,
+                nm.marble3D,
+                COLORS["marble1"],
+                COLORS["marble1"] * 1.10,
                 (0.8, 0.8, 1),
                 1,
                 0.5,

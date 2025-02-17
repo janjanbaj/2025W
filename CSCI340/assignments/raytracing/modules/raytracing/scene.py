@@ -4,6 +4,8 @@ Author: Liz Matthews, Geoff Matthews
 
 import numpy as np
 
+from ..utils.definitions import EPSILON
+
 from .objects import Sphere, Plane
 from .camera import Camera
 from ..utils.vector import vec
@@ -38,6 +40,8 @@ class Scene(object):
         minDistance = np.inf
 
         for i in range(len(distances)):
+            if distances[i] < EPSILON:
+                continue
             if distances[i] < minDistance:
                 nearestObj = self.objects[i]
                 minDistance = distances[i]

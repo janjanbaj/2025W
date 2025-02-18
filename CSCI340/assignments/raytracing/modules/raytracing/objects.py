@@ -129,6 +129,18 @@ class SphereTextured3D(Sphere):
         x, y, z = intersection
         return self.material.getAmbient(x, y, z)
 
+    def getDiffuse(self, intersection=None):
+        """Getter method for the material's diffuse color.
+        Intersection parameter is unused for Ray Tracing Basics."""
+        x, y, z = intersection
+        return self.material.getDiffuse(x, y, z)
+
+    def getSpecular(self, intersection=None):
+        """Getter method for the material's specular color.
+        Intersection parameter is unused for Ray Tracing Basics."""
+        x, y, z = intersection
+        return self.material.getSpecular(x, y, z)
+
 
 class Plane(Object3D):
     def __init__(self, normal, pos, material):
@@ -136,9 +148,6 @@ class Plane(Object3D):
         self.normal = normalize(normal)
 
     def intersect(self, ray):
-        dot = np.dot(ray.direction, self.normal)
-        # if abs(dot) > 0.000000001:
-        # return np.inf
         intersect = ((self.position - ray.position).dot(self.normal)) / (
             ray.direction.dot(self.normal)
         )
@@ -198,23 +207,39 @@ class Ellipsoids(Object3D):
                 for i in range(3)
             ]
         )
-        # derivative = [
-        #    2
-        #    * (intersection[i] - self.position[i])
-        #    / ((self.radius**2) * (self.stretch[i] ** 2))
-        #    for i in range(3)
-        # ]
-        # return normalize(derivative)
         return normalize(rot(x, y, z, ax, ay, az))
 
-        normal = np.array(
-            [
-                (2 * intersection[i] - self.position[i])
-                / ((self.radius**2) * (self.stretch[i] ** 2))
-                for i in range(3)
-            ]
-        )
-        return normalize(normal)
+
+class EllipsoidsTextured3D(Ellipsoids):
+    def __init__(self, radius, pos, stretch, angle, material: Material3D):
+        super().__init__(radius, pos, stretch, angle, material)
+
+    def getAmbient(self, intersection):
+        x, y, z = intersection
+        return self.material.getAmbient(x, y, z)
+
+    def getDiffuse(self, intersection=None):
+        """Getter method for the material's diffuse color.
+        Intersection parameter is unused for Ray Tracing Basics."""
+        x, y, z = intersection
+        return self.material.getDiffuse(x, y, z)
+
+    def getSpecular(self, intersection=None):
+        """Getter method for the material's specular color.
+        Intersection parameter is unused for Ray Tracing Basics."""
+        x, y, z = intersection
+        return self.material.getSpecular(x, y, z)
+
+
+# TODO: Later:
+# class Torus(Object3D):
+#    def __init__(self, pos, thick, radius, angle, material):
+#        super().__init__(pos, material)
+#        self.thick = thick
+#        self.radius = radius
+#        self.angle = angle
+#    def intersect(self, ray: Ray):
+#        return np.inf
 
 
 class Cube(Object3D):
@@ -223,13 +248,15 @@ class Cube(Object3D):
         self.last_intersection = None
         hl = length / 2
         self.length = length
-        self.max_bounds = np.array([pos[i] + length / 2 for i in range(3)])
-        self.min_bounds = np.array([pos[i] - length / 2 for i in range(3)])
 
         # Create orthogonal basis
-        z_axis = normalize(up)
-        y_axis = normalize(np.cross(up, forward))
+        # have to do the longer normalization
         x_axis = normalize(forward)
+        z_axis = normalize(up)
+        y_axis = np.cross(x_axis, z_axis)
+        y_axis = normalize(y_axis)
+        z_axis = np.cross(y_axis, x_axis)
+        z_axis = normalize(z_axis)
 
         self.planes = [
             Plane(x_axis, pos + x_axis * hl, material),
@@ -253,7 +280,7 @@ class Cube(Object3D):
             if intersect == np.inf:
                 continue
             # check if exiting
-            if surface.getNormal(intersect).dot(ray.direction) > EPSILON:
+            if surface.getNormal(intersect).dot(ray.direction) > 0.000000000001:
                 # if exiting add to exit
                 if intersect < minExit:
                     minExit = intersect
@@ -272,3 +299,24 @@ class Cube(Object3D):
 
     def getNormal(self, intersection):
         return self.last_intersection.getNormal(intersection)
+
+
+class CubeTextured3D(Cube):
+    def __init__(self, pos, forward, up, length, material):
+        super().__init__(pos, forward, up, length, material)
+
+    def getAmbient(self, intersection):
+        x, y, z = intersection
+        return self.material.getAmbient(x, y, z)
+
+    def getDiffuse(self, intersection=None):
+        """Getter method for the material's diffuse color.
+        Intersection parameter is unused for Ray Tracing Basics."""
+        x, y, z = intersection
+        return self.material.getDiffuse(x, y, z)
+
+    def getSpecular(self, intersection=None):
+        """Getter method for the material's specular color.
+        Intersection parameter is unused for Ray Tracing Basics."""
+        x, y, z = intersection
+        return self.material.getSpecular(x, y, z)

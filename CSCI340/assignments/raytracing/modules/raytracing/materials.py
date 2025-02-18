@@ -40,10 +40,30 @@ class Material(object):
         return vec(self.specCoeff)
 
 
-class Material3D(Material):
-    def __init__(self, pattern, ambient, diffuse, specular, shine=100, specCoeff=1.0):
-        super().__init__(ambient, diffuse, specular, shine, specCoeff)
-        self.pattern = pattern
+class Material3D(object):
+    def __init__(self, ambient, diffuse, specular, shine=100, specCoeff=1.0):
+        self.ambient = ambient
+        self.diffuse = diffuse
+        self.specular = specular
+        self.shine = shine
+        self.specCoeff = specCoeff
+        self.ambient = ambient
 
     def getAmbient(self, x, y, z):
-        return self.pattern(x, y, z)
+        return self.ambient(x, y, z)
+
+    def getDiffuse(self, x, y, z):
+        """Getter method for diffuse color."""
+        return self.diffuse(x, y, z)
+
+    def getSpecular(self, x, y, z):
+        """Getter method for specular color."""
+        return self.specular(x, y, z)
+
+    def getShine(self):
+        """Getter method for shininess factor."""
+        return vec(self.shine)
+
+    def getSpecularCoefficient(self):
+        """Getter method for specular coefficient."""
+        return vec(self.specCoeff)

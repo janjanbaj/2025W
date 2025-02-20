@@ -81,7 +81,7 @@ class RayTracer(ProgressiveRenderer):
             0.7,
             vec(0, 1, -3),
             Material3D(
-                lambda x, y, z: nm.marble3D(x, z, y) * 0.5,
+                lambda x, y, z: nm.marble3D(x, z, y, noiseStrength=0.6) * 0.5,
                 nm.marble3D,
                 nm.marble3D,
                 1,
@@ -92,9 +92,9 @@ class RayTracer(ProgressiveRenderer):
             0.7,
             vec(1, 0, -2.3),
             Material3D(
-                lambda x, y, z: nm.wood3D(x, y, z, axis=3),
-                lambda x, y, z: nm.wood3D(x, y, z, axis=2),
-                lambda x, y, z: nm.wood3D(x, y, z, axis=2),
+                lambda x, y, z: nm.wood3D(x, y, z, axis=3, noiseStrength=0.7),
+                lambda x, y, z: nm.wood3D(x, y, z, axis=2, noiseStrength=0.7),
+                lambda x, y, z: nm.wood3D(x, y, z, axis=2, noiseStrength=0.7),
                 1,
                 1.0,
             ),

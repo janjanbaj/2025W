@@ -2,8 +2,15 @@
 Author: Liz Matthews, Geoff Matthews
 """
 
+from numpy import clip
 from typing_extensions import override
 from ..utils.vector import vec
+
+# Must be less than 1
+AMBIENT_MULTIPLE = 0.45
+
+# Greater than 1
+SPECULAR_MULTIPLE = 1.6
 
 
 class Material(object):
@@ -41,24 +48,21 @@ class Material(object):
 
 
 class Material3D(object):
-    def __init__(self, ambient, diffuse, specular, shine=100, specCoeff=1.0):
-        self.ambient = ambient
-        self.diffuse = diffuse
-        self.specular = specular
+    def __init__(self, pattern, shine=100, specCoeff=1.0):
+        self.pattern = pattern
         self.shine = shine
         self.specCoeff = specCoeff
-        self.ambient = ambient
 
     def getAmbient(self, x, y, z):
-        return self.ambient(x, y, z)
+        return self.pattern(x, y, z) * AMBIENT_MULTIPLE
 
     def getDiffuse(self, x, y, z):
         """Getter method for diffuse color."""
-        return self.diffuse(x, y, z)
+        return self.pattern(x, y, z)
 
     def getSpecular(self, x, y, z):
         """Getter method for specular color."""
-        return self.specular(x, y, z)
+        return clip(self.pattern(x, y, z) * SPECULAR_MULTIPLE, 0.0, 1.0)
 
     def getShine(self):
         """Getter method for shininess factor."""

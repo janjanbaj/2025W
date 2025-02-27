@@ -5,7 +5,14 @@ Author: Liz Matthews, Geoff Matthews
 import numpy as np
 from abc import ABC, abstractmethod
 
-from ..raytracing.materials import Material3D
+import pygame
+
+from ..raytracing.materials import (
+    AMBIENT_MULTIPLE,
+    SPECULAR_MULTIPLE,
+    Material,
+    Material3D,
+)
 
 from ..utils.definitions import EPSILON
 
@@ -159,6 +166,47 @@ class Plane(Object3D):
         return self.normal
 
 
+class TexturedPlane(Plane):
+    def __init__(self, normal, pos, img, scale_u=1.0, scale_v=1.0):
+        super().__init__(
+            normal, pos, Material((1.0, 1.0, 1.0), (1.0, 1.0, 1.0), (1.0, 1.0, 1.0))
+        )
+        self.image = pygame.image.load(img)
+        self.name = img
+
+        # Arbitrary FWD
+        fwd = max(
+            map(lambda x: np.cross(normal, x), [(0, 0, 1), (0, 1, 0), (1, 0, 0)]),
+            key=lambda v: np.dot(v, normal),
+        )
+        self.u = normalize(fwd - (np.dot(fwd, self.normal) * self.normal))
+        self.v = normalize(np.cross(self.u, self.normal))
+        self.scale_u = scale_u
+        self.scale_v = scale_v
+
+    def getDiffuse(self, intersection=None):
+        return self.getAmbient(intersection) / AMBIENT_MULTIPLE
+
+    def getSpecular(self, intersection=None):
+        return self.getAmbient(intersection)
+
+    def getAmbient(self, intersection=None):
+        p = intersection - self.position
+
+        coord_u = np.dot(self.u, p)
+        coord_v = np.dot(self.v, p)
+
+        percent_u = (coord_u % self.scale_u) / self.scale_u
+        percent_v = (coord_v % self.scale_v) / self.scale_v
+
+        img_x = int(percent_u * self.image.get_width())
+        img_y = int(percent_v * self.image.get_height())
+
+        pixel = self.image.get_at((img_x, img_y))[:-1]
+
+        return vec(list(map(lambda x: x / 255.0, pixel))) * AMBIENT_MULTIPLE
+
+
 class Ellipsoids(Object3D):
     def __init__(self, radius, pos, stretch, angle, material):
         super().__init__(pos, material)
@@ -251,12 +299,12 @@ class Cube(Object3D):
 
         # Create orthogonal basis
         # have to do the longer normalization
-        x_axis = normalize(forward)
+        self.x_axis = x_axis = normalize(forward)
         z_axis = normalize(up)
         y_axis = np.cross(x_axis, z_axis)
-        y_axis = normalize(y_axis)
+        self.y_axis = y_axis = normalize(y_axis)
         z_axis = np.cross(y_axis, x_axis)
-        z_axis = normalize(z_axis)
+        self.z_axis = z_axis = normalize(z_axis)
 
         self.planes = [
             Plane(x_axis, pos + x_axis * hl, material),
@@ -267,8 +315,11 @@ class Cube(Object3D):
             Plane(-z_axis, pos - z_axis * hl, material),
         ]
 
+    def getAmbient(self, intersection=None):
+        return self.last_intersection.getAmbient(intersection)
+
     def intersect(self, ray: Ray):
-        entries = []
+        entries = 0
         maxEntry = -np.inf
         minExit = np.inf
 
@@ -285,13 +336,14 @@ class Cube(Object3D):
                 if intersect < minExit:
                     minExit = intersect
             else:
-                entries.append(intersect)
+                entries = 1
                 if intersect > maxEntry:
                     maxEntry = intersect
                     self.last_intersection = surface
 
-        if len(entries) == 0:
+        if entries == 0:
             return np.inf
+
         if maxEntry < minExit:
             return maxEntry
 
@@ -299,6 +351,26 @@ class Cube(Object3D):
 
     def getNormal(self, intersection):
         return self.last_intersection.getNormal(intersection)
+
+
+class TexturedCube(Cube):
+    def __init__(self, pos, forward, up, length, front, left, right, back, up_t, down):
+        super().__init__(
+            pos,
+            forward,
+            up,
+            length,
+            Material((1.0, 1.0, 1.0), (1.0, 1.0, 1.0), (1.0, 1.0, 1.0)),
+        )
+        hl = self.length / 2
+        self.planes = [
+            TexturedPlane(self.x_axis, pos + self.x_axis * hl, left),
+            TexturedPlane(-self.x_axis, pos - self.x_axis * hl, down),
+            TexturedPlane(self.y_axis, pos + self.y_axis * hl, up_t),
+            TexturedPlane(-self.y_axis, pos - self.y_axis * hl, right),
+            TexturedPlane(self.z_axis, pos + self.z_axis * hl, front),
+            TexturedPlane(-self.z_axis, pos - self.z_axis * hl, back),
+        ]
 
 
 class CubeTextured3D(Cube):

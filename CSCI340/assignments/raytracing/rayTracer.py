@@ -17,6 +17,8 @@ from modules.raytracing.objects import (
     Plane,
     SphereTextured3D,
     CubeTextured3D,
+    TexturedCube,
+    TexturedPlane,
 )
 from modules.raytracing.lights import PointLight
 from modules.raytracing.materials import Material, Material3D
@@ -31,6 +33,8 @@ class RayTracer(ProgressiveRenderer):
         self.fog = vec(0.7, 0.9, 1.0)
         self.scene = Scene(aspect=width / height, fov=45)
 
+        nm = NoisePatterns()
+
         light = PointLight(vec(1, 3, 0), vec(1, 0, 1))
 
         plane = Plane(
@@ -44,8 +48,9 @@ class RayTracer(ProgressiveRenderer):
                 0.1,
             ),
         )
-        nm = NoisePatterns()
 
+        # plane = TexturedPlane(vec(0, 1, 0), vec(0, -1, 0), "floor.png")
+        #
         cube1 = Cube(
             vec(-1.5, 2, -4),
             vec(-0.3, 1, 0),
@@ -54,12 +59,25 @@ class RayTracer(ProgressiveRenderer):
             Material(vec(0.4, 0.2, 0.2), vec(1.0, 0.2, 0.2), (1, 0.8, 0.8), 100, 1.0),
         )
 
-        cube2 = CubeTextured3D(
+        # cube2 = CubeTextured3D(
+        #    vec(2, 2, -5),
+        #    vec(0.3, 1, 0),
+        #    vec(0, 0, 1),
+        #    0.8,
+        #    Material3D(nm.clouds3D, 100, 1.0),
+        # )
+
+        cube2 = TexturedCube(
             vec(2, 2, -5),
             vec(0.3, 1, 0),
-            vec(0, 0, 1),
-            0.8,
-            Material3D(nm.clouds3D, nm.clouds3D, nm.clouds3D, 100, 1.0),
+            vec(0.5, 0, 1),
+            1.0,
+            "./die/die1.png",
+            "./die/die2.png",
+            "./die/die3.png",
+            "./die/die4.png",
+            "./die/die5.png",
+            "./die/die6.png",
         )
 
         ellipsoid = EllipsoidsTextured3D(
@@ -71,8 +89,6 @@ class RayTracer(ProgressiveRenderer):
                 lambda x, y, z: nm.clouds3D(
                     x, y, z, c1=COLORS["wood2"], c2=COLORS["white"]
                 ),
-                nm.clouds3D,
-                nm.clouds3D,
                 100,
                 1.0,
             ),
@@ -82,8 +98,6 @@ class RayTracer(ProgressiveRenderer):
             vec(0, 1, -3),
             Material3D(
                 lambda x, y, z: nm.marble3D(x, z, y, noiseStrength=0.6) * 0.5,
-                nm.marble3D,
-                nm.marble3D,
                 1,
                 0.5,
             ),
@@ -93,8 +107,6 @@ class RayTracer(ProgressiveRenderer):
             vec(1, 0, -2.3),
             Material3D(
                 lambda x, y, z: nm.wood3D(x, y, z, axis=3, noiseStrength=0.7),
-                lambda x, y, z: nm.wood3D(x, y, z, axis=2, noiseStrength=0.7),
-                lambda x, y, z: nm.wood3D(x, y, z, axis=2, noiseStrength=0.7),
                 1,
                 1.0,
             ),
@@ -124,10 +136,8 @@ class RayTracer(ProgressiveRenderer):
                 intersection
             ):
                 # only do this if not blocked
-                diffuse = (
-                    (obj.getDiffuse(intersection) - color)
-                    * max(np.dot(object_normal, light_vector), 1e-13)
-                    * l.color
+                diffuse = (obj.getDiffuse(intersection) - color) * max(
+                    np.dot(object_normal, light_vector), 1e-13
                 )
 
                 color += diffuse

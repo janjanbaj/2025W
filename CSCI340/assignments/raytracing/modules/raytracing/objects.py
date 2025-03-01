@@ -20,6 +20,8 @@ from .ray import Ray
 from ..utils.vector import normalize, rotate, vec
 from numpy import cos, sin
 
+WHITE_MATERIAL = Material((1.0, 1.0, 1.0), (1.0, 1.0, 1.0), (1.0, 1.0, 1.0), 0, 0)
+
 
 def rotZ(x, y, z, theta):
     return (x * cos(theta) - y * sin(theta), x * sin(theta) + y * cos(theta), z)
@@ -126,6 +128,50 @@ class Sphere(Object3D):
         return normalize(vec(intersection - self.position))
 
 
+class TexturedSphere(Sphere):
+    def __init__(self, radius, pos, img, up, forward, scale_u=1.0, scale_v=1.0):
+        super().__init__(radius, pos, WHITE_MATERIAL)
+        self.image = pygame.image.load(img)
+        self.scale_u = scale_u
+        self.scale_v = scale_v
+
+        self.forward = normalize(forward)
+        self.up = normalize(up)
+        self.right = np.cross(self.forward, self.up)
+        self.right = normalize(self.right)
+        self.up = np.cross(self.right, self.forward)
+        self.up = normalize(self.up)
+
+        return
+
+    def getAmbient(self, intersection=None):
+        d = self.position - intersection
+        d = normalize(
+            np.array(
+                [np.dot(d, self.right), np.dot(d, self.up), np.dot(d, self.forward)]
+            )
+        )
+
+        u = 0.5 + np.arctan2(d[2], d[0]) / (2 * np.pi)
+        v = np.arccos(d[1]) / np.pi
+
+        percent_u = (u % self.scale_u) / self.scale_u
+        percent_v = (v % self.scale_v) / self.scale_v
+
+        img_x = int(percent_u * self.image.get_width())
+        img_y = int(percent_v * self.image.get_height())
+
+        pixel = self.image.get_at((img_x, img_y))[:-1]
+
+        return vec(list(map(lambda x: x / 255.0, pixel))) * AMBIENT_MULTIPLE
+
+    def getDiffuse(self, intersection=None):
+        return self.getAmbient(intersection) / AMBIENT_MULTIPLE
+
+    def getSpecular(self, intersection=None):
+        return self.getAmbient(intersection)
+
+
 class SphereTextured3D(Sphere):
     def __init__(self, radius, pos, material: Material3D):
         self.position = pos
@@ -193,8 +239,8 @@ class TexturedPlane(Plane):
     def getAmbient(self, intersection=None):
         p = intersection - self.position
 
-        coord_u = np.dot(self.u, p)
-        coord_v = np.dot(self.v, p)
+        coord_u = np.dot(self.u, p) - 0.5
+        coord_v = np.dot(self.v, p) - 0.5
 
         percent_u = (coord_u % self.scale_u) / self.scale_u
         percent_v = (coord_v % self.scale_v) / self.scale_v

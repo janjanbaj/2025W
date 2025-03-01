@@ -1,5 +1,5 @@
 """
-Author: Liz Matthews, Geoff Matthews
+, np.dot(d, self.forward)Author: Liz Matthews, Geoff Matthews
 """
 
 import numpy as np
@@ -19,6 +19,7 @@ from modules.raytracing.objects import (
     CubeTextured3D,
     TexturedCube,
     TexturedPlane,
+    TexturedSphere,
 )
 from modules.raytracing.lights import PointLight
 from modules.raytracing.materials import Material, Material3D
@@ -49,8 +50,8 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        # plane = TexturedPlane(vec(0, 1, 0), vec(0, -1, 0), "floor.png")
-        #
+        plane = TexturedPlane(vec(0, 1, 0), vec(0, -1, 0), "floor.png")
+
         cube1 = Cube(
             vec(-1.5, 2, -4),
             vec(-0.3, 1, 0),
@@ -71,7 +72,7 @@ class RayTracer(ProgressiveRenderer):
             vec(2, 2, -5),
             vec(0.3, 1, 0),
             vec(0.5, 0, 1),
-            1.0,
+            0.98,
             "./die/die1.png",
             "./die/die2.png",
             "./die/die3.png",
@@ -111,6 +112,11 @@ class RayTracer(ProgressiveRenderer):
                 1.0,
             ),
         )
+
+        sphere3 = TexturedSphere(
+            0.7, vec(1, 0, -2.3), "./earth.png.jpg", vec(0, -1, 0), vec(1, 2, -3)
+        )
+
         self.scene.objects = [ellipsoid, cube1, cube2, sphere1, sphere3, plane]
         self.scene.lights = [light]
 

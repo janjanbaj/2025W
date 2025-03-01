@@ -6,6 +6,8 @@ from numpy import clip
 from typing_extensions import override
 from ..utils.vector import vec
 
+from pygame import image
+
 # Must be less than 1
 AMBIENT_MULTIPLE = 0.45
 
@@ -45,6 +47,15 @@ class Material(object):
     def getSpecularCoefficient(self):
         """Getter method for specular coefficient."""
         return vec(self.specCoeff)
+
+
+# TODO: Abstraction not clear. Will have to do it after i finish sphere.
+class TexturedMaterial(object):
+    def __init__(self, image_name, shine=100, specCoeff=1.0):
+        self.shine = shine
+        self.specCoeff = specCoeff
+
+        self.image = image.load(image_name)
 
 
 class Material3D(object):

@@ -48,14 +48,48 @@ class Material(object):
         """Getter method for specular coefficient."""
         return vec(self.specCoeff)
 
+    def getRecursiveRay(self):
+        return False
 
-# TODO: Abstraction not clear. Will have to do it after i finish sphere.
-class TexturedMaterial(object):
-    def __init__(self, image_name, shine=100, specCoeff=1.0):
-        self.shine = shine
-        self.specCoeff = specCoeff
+    def getRefractive(self):
+        return False
 
-        self.image = image.load(image_name)
+
+class MaterialMirror(Material):
+    def __init__(
+        self,
+        ambient,
+        diffuse,
+        specular,
+        reflective_factor=1.0,
+        shine=100,
+        specCoeff=1.0,
+    ):
+        super().__init__(ambient, diffuse, specular, shine, specCoeff)
+        self.reflective_factor = reflective_factor
+
+    def getRecursiveRay(self):
+        return True
+
+
+class MaterialRefractive(Material):
+    def __init__(
+        self,
+        ambient,
+        diffuse,
+        specular,
+        refractive_index=1.0,
+        shine=100,
+        specCoeff=1.0,
+    ):
+        super().__init__(ambient, diffuse, specular, shine, specCoeff)
+        self.refractive_index = refractive_index
+
+    def getRecursiveRay(self):
+        return True
+
+    def getRefractive(self):
+        return True
 
 
 class Material3D(object):
@@ -82,3 +116,6 @@ class Material3D(object):
     def getSpecularCoefficient(self):
         """Getter method for specular coefficient."""
         return vec(self.specCoeff)
+
+    def getRecursiveRay(self):
+        return False

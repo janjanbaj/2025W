@@ -120,8 +120,10 @@ class Sphere(Object3D):
 
         # the following is an optimization on the if conditions. we first check if the subtracted solution that is sol_1 is negative, if so we will pick the other one which we deal with later. if sol1 is smaller than sol2, pick sol1 because it is closer
         hit_point = np.where((sol_1 > 0) & (sol_2 > sol_1), sol_1, sol_2)
+
         # if discriminant is non zero then there is for sure an intersection. if not then we did not hit the sphere. if the hit point is not positive then we basically hit it tangentially and can return inf
         hit_bool = (disc > 0) & (hit_point > 0)
+
         return np.where(hit_bool, hit_point, np.inf)
 
     def getNormal(self, intersection):

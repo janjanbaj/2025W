@@ -28,7 +28,7 @@ class Camera(object):
         self,
         focus=vec(0, 0.2, 0),
         fwd=vec(0, 0, -1),
-        up=vec(0, 1, 0),
+        up=vec(0, 2, 0),
         fov=90.0,
         distance=2.5,
         aspect=4 / 3,
@@ -36,10 +36,10 @@ class Camera(object):
         """Sets up the camera given the parameters.
         Calculates position, ul, ur, ll, and lr."""
         # as per the slides
-        fwd = normalize(fwd)
+        fwd = self.fwd = normalize(fwd)
         up = normalize(up)
         right = normalize(cross(fwd, up))
-        up = normalize(cross(right, fwd))
+        up = self.up = normalize(cross(right, fwd))
 
         # half because top down view
         width = 2 * distance * tan(radians(fov) / 2)
@@ -47,6 +47,7 @@ class Camera(object):
 
         center = focus
         self.position = focus - distance * fwd
+        self.distance = distance
 
         self.ul = center + height / 2 * up - (width / 2) * right
         self.ur = center + height / 2 * up + (width / 2) * right
@@ -57,7 +58,7 @@ class Camera(object):
         self,
         focus=vec(0, 0, 0),
         fwd=vec(0, 0, -1),
-        up=vec(0, 1, 0),
+        up=vec(0, 2, 0),
         fov=45.0,
         distance=2.5,
         aspect=4 / 3,

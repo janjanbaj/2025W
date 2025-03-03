@@ -1,5 +1,6 @@
 """
-, np.dot(d, self.forward)Author: Liz Matthews, Geoff Matthews
+Author: Liz Matthews, Geoff Matthews
+
 """
 
 import numpy as np
@@ -22,19 +23,28 @@ from modules.raytracing.objects import (
     TexturedSphere,
 )
 from modules.raytracing.lights import PointLight
-from modules.raytracing.materials import Material, Material3D
+from modules.raytracing.materials import (
+    Material,
+    Material3D,
+    MaterialMirror,
+    MaterialRefractive,
+)
 from modules.raytracing.scene import Scene
-from modules.utils.vector import normalize, vec
+from modules.utils.vector import lerp, normalize, vec
 from modules.raytracing.ray import Ray
+
+RECURSIVE_RAY_LIMIT = 4
 
 
 class RayTracer(ProgressiveRenderer):
-    def __init__(self, width=700, height=700, show=ShowTypes.PerColumn):
+    def __init__(self, width=600, height=900, show=ShowTypes.PerColumn):
         super().__init__(width, height, show=show)
-        self.fog = vec(0.7, 0.9, 1.0)
-        self.scene = Scene(aspect=width / height, fov=45)
+        self.fog = vec(0.505, 0.6, 0.709)
+        self.scene = Scene(aspect=width / height, fov=35.0)
+        self.recurse_level = 0
+        self.enter_index = 1.0
 
-        nm = NoisePatterns()
+        self.nm = nm = NoisePatterns()
 
         light = PointLight(vec(1, 3, 0), vec(1, 0, 1))
 
@@ -50,7 +60,13 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        plane = TexturedPlane(vec(0, 1, 0), vec(0, -1, 0), "floor.png")
+        plane = TexturedPlane(
+            vec(0, 1, 0),
+            vec(0, -1, 0),
+            "floor.png",
+            scale_u=2.0,
+            scale_v=2.0,
+        )
 
         cube1 = Cube(
             vec(-1.5, 2, -4),
@@ -81,31 +97,18 @@ class RayTracer(ProgressiveRenderer):
             "./die/die6.png",
         )
 
-        ellipsoid = EllipsoidsTextured3D(
-            0.6,
-            vec(-1, -0.2, -4),
-            vec(2, 1, 1),
-            vec(-45, 90, 20),
-            Material3D(
-                lambda x, y, z: nm.clouds3D(
-                    x, y, z, c1=COLORS["wood2"], c2=COLORS["white"]
-                ),
-                100,
-                1.0,
-            ),
-        )
-        sphere1 = SphereTextured3D(
-            0.7,
-            vec(0, 1, -3),
-            Material3D(
-                lambda x, y, z: nm.marble3D(x, z, y, noiseStrength=0.6) * 0.5,
-                1,
-                0.5,
-            ),
-        )
+        # sphere1 = SphereTextured3D(
+        #    0.7,
+        #    vec(0, 1, -3),
+        #    Material3D(
+        #        lambda x, y, z: nm.marble3D(x, z, y, noiseStrength=0.6) * 0.5,
+        #        1,
+        #        0.5,
+        #    ),
+        # )
         sphere3 = SphereTextured3D(
             0.7,
-            vec(1, 0, -2.3),
+            vec(1, 0, -4.3),
             Material3D(
                 lambda x, y, z: nm.wood3D(x, y, z, axis=3, noiseStrength=0.7),
                 1,
@@ -113,15 +116,53 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        sphere3 = TexturedSphere(
-            0.7, vec(1, 0, -2.3), "./earth.png.jpg", vec(0, -1, 0), vec(1, 2, -3)
+        earth = TexturedSphere(
+            5.0,
+            self.scene.camera.getPosition()
+            + (2 * self.scene.camera.fwd)
+            + (9 * self.scene.camera.up),
+            "./earth.png.jpg",
+            vec(0, 1, 0),
+            vec(1, 2, -3),
         )
 
-        self.scene.objects = [ellipsoid, cube1, cube2, sphere1, sphere3, plane]
+        eye = TexturedSphere(
+            2.0,
+            self.scene.camera.getPosition()
+            - (2 * self.scene.camera.fwd)
+            + (1 * self.scene.camera.up),
+            "./eye.webp",
+            vec(0, -1, 0),
+            vec(-500, 0, 7),
+        )
+
+        sphere1 = Sphere(
+            1.25,
+            vec(0, 1, -2),
+            MaterialMirror(
+                vec(0.5, 0.5, 0.5),
+                vec(0.5, 0.5, 0.5),
+                (0.5, 0.5, 0.5),
+            ),
+        )
+
+        # sphere1 = Sphere(
+        #    1.0,
+        #    vec(0, 1, -2),
+        #    MaterialRefractive(
+        #        vec(0.5, 0.5, 0.5),
+        #        vec(0.5, 0.5, 0.5),
+        #        (0.5, 0.5, 0.5),
+        #        refractive_index=1.23,
+        #    ),
+        # )
+
+        self.scene.objects = [eye, earth, sphere1, plane, cube2, sphere3]
         self.scene.lights = [light]
 
     def getColorR(self, ray: Ray):
         # Find any objects it collides with and calculate color
+
         obj, distance_to_obj = self.scene.nearestObject(ray)
 
         # Return fog if doesn't hit anything
@@ -130,10 +171,10 @@ class RayTracer(ProgressiveRenderer):
 
         intersection = ray.getPositionAt(distance_to_obj)
 
+        object_normal = normalize(obj.getNormal(intersection))
+
         # the light energy given off ie. the diffuse amt is proportional to the cosine
         color = obj.getAmbient(intersection)
-
-        object_normal = obj.getNormal(intersection)
 
         for l in self.scene.lights:
             light_vector = l.getVectorToLight(intersection)
@@ -155,6 +196,64 @@ class RayTracer(ProgressiveRenderer):
                 )
 
                 color += specular
+
+        if obj.material.getRecursiveRay() and self.recurse_level < RECURSIVE_RAY_LIMIT:
+            self.recurse_level += 1
+
+            if obj.material.getRefractive():
+                n_r = 1.0
+                n_t = obj.material.refractive_index
+
+                u_r = ray.direction
+                n = object_normal
+
+                entering_exiting = np.dot(u_r, n)
+
+                # check if we are entering something or leaving something:
+                if entering_exiting > 0.001:
+                    # if we are leaving the object then the current object is the
+                    # transimitting medium
+                    n_r, n_t = n_t, n_r
+                    n = -n
+
+                cos_theta = np.dot(-u_r, n)
+                n_ratio = n_r / n_t
+
+                cos_phi = 1 - (n_ratio * n_ratio) * (1 - (cos_theta) ** 2)
+
+                if cos_phi < 0.001:
+                    # Total internal reflection occurs so just reflection.
+
+                    reflection_vector = u_r - 2 * np.dot(u_r, n) * n
+                    new_ray = Ray(
+                        (intersection + (EPSILON * reflection_vector)),
+                        reflection_vector,
+                    )
+
+                else:
+                    u_t = (n_ratio * cos_theta - np.sqrt(cos_phi) * n) + n_ratio * u_r
+
+                    new_ray = Ray(intersection + (0.01 * u_t), u_t)
+
+                color = self.getColorR(new_ray)
+
+                self.recurse_level -= 1
+
+                return color
+
+            # per the slides simplified because j = a -i and j -i = a -2 i:
+            reflection_vector = (
+                ray.direction - 2 * np.dot(ray.direction, object_normal) * object_normal
+            )
+            reflection_vector = normalize(reflection_vector)
+
+            # bigger epsilon
+            reflection_ray = Ray(
+                (intersection + (0.001 * reflection_vector)), reflection_vector
+            )
+            r_color = self.getColorR(reflection_ray)
+            self.recurse_level -= 1
+            return lerp(color, r_color, obj.material.reflective_factor)
 
         return color
 

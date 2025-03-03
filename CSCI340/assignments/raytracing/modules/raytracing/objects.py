@@ -147,7 +147,7 @@ class TexturedSphere(Sphere):
         return
 
     def getAmbient(self, intersection=None):
-        d = self.position - intersection
+        d = intersection - self.position
         d = normalize(
             np.array(
                 [np.dot(d, self.right), np.dot(d, self.up), np.dot(d, self.forward)]
@@ -408,7 +408,7 @@ class TexturedCube(Cube):
             forward,
             up,
             length,
-            Material((1.0, 1.0, 1.0), (1.0, 1.0, 1.0), (1.0, 1.0, 1.0)),
+            Material((1.0, 1.0, 1.0), (1.0, 1.0, 1.0), (1.0, 1.0, 1.0), 0, 0),
         )
         hl = self.length / 2
         self.planes = [

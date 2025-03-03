@@ -33,7 +33,7 @@ from modules.raytracing.scene import Scene
 from modules.utils.vector import lerp, normalize, vec
 from modules.raytracing.ray import Ray
 
-RECURSIVE_RAY_LIMIT = 4
+RECURSIVE_RAY_LIMIT = 9
 
 
 class RayTracer(ProgressiveRenderer):
@@ -63,7 +63,7 @@ class RayTracer(ProgressiveRenderer):
         plane = TexturedPlane(
             vec(0, 1, 0),
             vec(0, -1, 0),
-            "floor.png",
+            "./textures/floor.png",
             scale_u=2.0,
             scale_v=2.0,
         )
@@ -106,24 +106,24 @@ class RayTracer(ProgressiveRenderer):
         #        0.5,
         #    ),
         # )
-        sphere3 = SphereTextured3D(
-            0.7,
-            vec(1, 0, -4.3),
-            Material3D(
-                lambda x, y, z: nm.wood3D(x, y, z, axis=3, noiseStrength=0.7),
-                1,
-                1.0,
-            ),
-        )
+        # sphere3 = SphereTextured3D(
+        #     0.7,
+        #     vec(1, 0, -4.3),
+        #     Material3D(
+        #         lambda x, y, z: nm.wood3D(x, y, z, axis=3, noiseStrength=0.7),
+        #         1,
+        #         1.0,
+        #     ),
+        # )
 
         earth = TexturedSphere(
             5.0,
             self.scene.camera.getPosition()
             + (2 * self.scene.camera.fwd)
             + (9 * self.scene.camera.up),
-            "./earth.png.jpg",
-            vec(0, 1, 0),
-            vec(1, 2, -3),
+            "./textures/earth.png.jpg",
+            vec(0, -1, 0),
+            vec(0, -1, 0),
         )
 
         eye = TexturedSphere(
@@ -131,9 +131,9 @@ class RayTracer(ProgressiveRenderer):
             self.scene.camera.getPosition()
             - (2 * self.scene.camera.fwd)
             + (1 * self.scene.camera.up),
-            "./eye.webp",
+            "./textures/eye.webp",
             vec(0, -1, 0),
-            vec(-500, 0, 7),
+            vec(42, 0, 3),
         )
 
         sphere1 = Sphere(
@@ -146,16 +146,16 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        # sphere1 = Sphere(
-        #    1.0,
-        #    vec(0, 1, -2),
-        #    MaterialRefractive(
-        #        vec(0.5, 0.5, 0.5),
-        #        vec(0.5, 0.5, 0.5),
-        #        (0.5, 0.5, 0.5),
-        #        refractive_index=1.23,
-        #    ),
-        # )
+        sphere3 = Sphere(
+            3.0,
+            self.scene.camera.getPosition() - (4 * self.scene.camera.fwd),
+            MaterialRefractive(
+                vec(0.5, 0.5, 0.5),
+                vec(0.5, 0.5, 0.5),
+                (0.5, 0.5, 0.5),
+                refractive_index=1.23,
+            ),
+        )
 
         self.scene.objects = [eye, earth, sphere1, plane, cube2, sphere3]
         self.scene.lights = [light]
@@ -231,7 +231,7 @@ class RayTracer(ProgressiveRenderer):
                     )
 
                 else:
-                    u_t = (n_ratio * cos_theta - np.sqrt(cos_phi) * n) + n_ratio * u_r
+                    u_t = (n_ratio * cos_theta - np.sqrt(cos_phi)) * n + n_ratio * u_r
 
                     new_ray = Ray(intersection + (0.01 * u_t), u_t)
 
@@ -275,7 +275,7 @@ class RayTracer(ProgressiveRenderer):
         return color
 
 
-# Calls the 'main' function when this script is executed
+# Calls the 'main' function when this script is execute
 if __name__ == "__main__":
     RayTracer.main("Ray Tracer Basics")
     pygame.quit()

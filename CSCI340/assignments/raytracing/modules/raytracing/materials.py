@@ -79,11 +79,13 @@ class MaterialRefractive(Material):
         diffuse,
         specular,
         refractive_index=1.0,
+        transparency_factor=1.0,
         shine=100,
         specCoeff=1.0,
     ):
         super().__init__(ambient, diffuse, specular, shine, specCoeff)
         self.refractive_index = refractive_index
+        self.transparency_factor = transparency_factor
 
     def getRecursiveRay(self):
         return True

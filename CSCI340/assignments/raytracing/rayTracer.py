@@ -14,6 +14,7 @@ from modules.raytracing.objects import (
     Cube,
     Ellipsoids,
     EllipsoidsTextured3D,
+    PlaneTextured3D,
     Sphere,
     Plane,
     SphereTextured3D,
@@ -22,7 +23,7 @@ from modules.raytracing.objects import (
     TexturedPlane,
     TexturedSphere,
 )
-from modules.raytracing.lights import PointLight
+from modules.raytracing.lights import DirectionalLight, PointLight
 from modules.raytracing.materials import (
     Material,
     Material3D,
@@ -39,14 +40,14 @@ RECURSIVE_RAY_LIMIT = 9
 class RayTracer(ProgressiveRenderer):
     def __init__(self, width=600, height=900, show=ShowTypes.PerColumn):
         super().__init__(width, height, show=show)
-        self.fog = vec(0.505, 0.6, 0.709)
+        self.fog = vec(0.605, 0.7, 0.809)
         self.scene = Scene(aspect=width / height, fov=35.0)
         self.recurse_level = 0
         self.enter_index = 1.0
 
         self.nm = nm = NoisePatterns()
 
-        light = PointLight(vec(1, 3, 0), vec(1, 0, 1))
+        light = PointLight(vec(1, 2, 0), vec(1, 1, 1))
 
         plane = Plane(
             vec(0, 1, 0),
@@ -60,12 +61,18 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        plane = TexturedPlane(
-            vec(0, 1, 0),
-            vec(0, -1, 0),
-            "./textures/floor.png",
-            scale_u=2.0,
-            scale_v=2.0,
+        # floor = TexturedPlane(
+        #    vec(0, 1, 0),
+        #    vec(0, -1, 0),
+        #    "./textures/floor.png",
+        #    scale_u=2.0,
+        #    scale_v=2.0,
+        # )
+
+        sky = PlaneTextured3D(
+            vec(0, -21, 0),
+            vec(0, 5, -1),
+            Material3D(lambda x, y, z: nm.clouds3D(x, y, z, c1=self.fog), 0, 0),
         )
 
         cube1 = Cube(
@@ -83,19 +90,6 @@ class RayTracer(ProgressiveRenderer):
         #    0.8,
         #    Material3D(nm.clouds3D, 100, 1.0),
         # )
-
-        cube2 = TexturedCube(
-            vec(2, 2, -5),
-            vec(0.3, 1, 0),
-            vec(0.5, 0, 1),
-            0.98,
-            "./die/die1.png",
-            "./die/die2.png",
-            "./die/die3.png",
-            "./die/die4.png",
-            "./die/die5.png",
-            "./die/die6.png",
-        )
 
         # sphere1 = SphereTextured3D(
         #    0.7,
@@ -126,6 +120,19 @@ class RayTracer(ProgressiveRenderer):
             vec(0, -1, 0),
         )
 
+        dice = TexturedCube(
+            vec(0, 2, -5),
+            vec(0.3, 1, 0),
+            vec(0.5, 0, 1),
+            1.0,
+            "./die/die1.png",
+            "./die/die2.png",
+            "./die/die3.png",
+            "./die/die4.png",
+            "./die/die5.png",
+            "./die/die6.png",
+        )
+
         eye = TexturedSphere(
             2.0,
             self.scene.camera.getPosition()
@@ -136,7 +143,7 @@ class RayTracer(ProgressiveRenderer):
             vec(42, 0, 3),
         )
 
-        sphere1 = Sphere(
+        sphere_mirror = Sphere(
             1.25,
             vec(0, 1, -2),
             MaterialMirror(
@@ -146,9 +153,11 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        sphere3 = Sphere(
-            3.0,
-            self.scene.camera.getPosition() - (4 * self.scene.camera.fwd),
+        refractive_sphere = Sphere(
+            3.1,
+            self.scene.camera.getPosition()
+            - (4 * self.scene.camera.fwd)
+            + (5 * self.scene.camera.up),
             MaterialRefractive(
                 vec(0.5, 0.5, 0.5),
                 vec(0.5, 0.5, 0.5),
@@ -157,7 +166,7 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        self.scene.objects = [eye, earth, sphere1, plane, cube2, sphere3]
+        self.scene.objects = [dice]
         self.scene.lights = [light]
 
     def getColorR(self, ray: Ray):
@@ -174,7 +183,7 @@ class RayTracer(ProgressiveRenderer):
         object_normal = normalize(obj.getNormal(intersection))
 
         # the light energy given off ie. the diffuse amt is proportional to the cosine
-        color = obj.getAmbient(intersection)
+        color = obj.getAmbient(intersection) * obj.hittable
 
         for l in self.scene.lights:
             light_vector = l.getVectorToLight(intersection)
@@ -190,12 +199,13 @@ class RayTracer(ProgressiveRenderer):
                 color += diffuse
                 reflection_vector = normalize(light_vector - ray.direction)
 
-                specular = (obj.getSpecular(intersection) - color) * (
-                    (np.dot(reflection_vector, object_normal) ** obj.getShine())
-                    * obj.getSpecularCoefficient()
-                )
+                if obj.material.shine != 0.0:
+                    specular = (obj.getSpecular(intersection) - color) * (
+                        (np.dot(reflection_vector, object_normal) ** obj.getShine())
+                        * obj.getSpecularCoefficient()
+                    )
 
-                color += specular
+                    color += specular * obj.hittable
 
         if obj.material.getRecursiveRay() and self.recurse_level < RECURSIVE_RAY_LIMIT:
             self.recurse_level += 1
@@ -239,7 +249,7 @@ class RayTracer(ProgressiveRenderer):
 
                 self.recurse_level -= 1
 
-                return color
+                return lerp(obj.getAmbient(), color, obj.material.transparency_factor)
 
             # per the slides simplified because j = a -i and j -i = a -2 i:
             reflection_vector = (
@@ -252,6 +262,7 @@ class RayTracer(ProgressiveRenderer):
                 (intersection + (0.001 * reflection_vector)), reflection_vector
             )
             r_color = self.getColorR(reflection_ray)
+
             self.recurse_level -= 1
             return lerp(color, r_color, obj.material.reflective_factor)
 

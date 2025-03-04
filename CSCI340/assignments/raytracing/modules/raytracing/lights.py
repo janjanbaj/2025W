@@ -43,5 +43,5 @@ class DirectionalLight(AbstractLight):
     def getVectorToLight(self):
         return self.ray * -1
 
-    def getDistance(self):
-        return 0
+    def getDistance(self, point):
+        return np.linalg.norm(point - self.point)

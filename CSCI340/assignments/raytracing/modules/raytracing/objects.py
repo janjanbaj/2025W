@@ -56,6 +56,7 @@ class Object3D(ABC):
     def __init__(self, pos, material):
         self.position = np.array(pos)
         self.material = material
+        self.hittable = True
 
     def getAmbient(self, intersection=None):
         """Getter method for the material's ambient color.
@@ -143,6 +144,7 @@ class TexturedSphere(Sphere):
         self.right = normalize(self.right)
         self.up = np.cross(self.right, self.forward)
         self.up = normalize(self.up)
+        self.hittable = False
 
         return
 
@@ -214,26 +216,52 @@ class Plane(Object3D):
         return self.normal
 
 
+class PlaneTextured3D(Plane):
+    def __init__(self, normal, pos, material: Material3D):
+        super().__init__(normal, pos, material)
+
+    def getAmbient(self, intersection):
+        x, y, z = intersection
+        return self.material.getAmbient(x, y, z)
+
+    def getDiffuse(self, intersection=None):
+        """Getter method for the material's diffuse color.
+        Intersection parameter is unused for Ray Tracing Basics."""
+        x, y, z = intersection
+        return self.material.getDiffuse(x, y, z)
+
+    def getSpecular(self, intersection=None):
+        """Getter method for the material's specular color.
+        Intersection parameter is unused for Ray Tracing Basics."""
+        x, y, z = intersection
+        return self.material.getSpecular(x, y, z)
+
+
 class TexturedPlane(Plane):
-    def __init__(self, normal, pos, img, scale_u=1.0, scale_v=1.0):
+    def __init__(self, normal, pos, img, u=None, v=None, scale_u=1.0, scale_v=1.0):
         super().__init__(
             normal, pos, Material((1.0, 1.0, 1.0), (1.0, 1.0, 1.0), (1.0, 1.0, 1.0))
         )
         self.image = pygame.image.load(img)
         self.name = img
+        self.hittable = False
 
         # Arbitrary FWD
-        fwd = max(
-            map(lambda x: np.cross(normal, x), [(0, 0, 1), (0, 1, 0), (1, 0, 0)]),
-            key=lambda v: np.dot(v, normal),
-        )
-        self.u = normalize(fwd - (np.dot(fwd, self.normal) * self.normal))
-        self.v = normalize(np.cross(self.u, self.normal))
+        if u is None and v is None:
+            fwd = max(
+                map(lambda x: np.cross(normal, x), [(0, 0, 1), (0, 1, 0), (1, 0, 0)]),
+                key=lambda v: np.dot(v, normal),
+            )
+            self.u = normalize(fwd - (np.dot(fwd, self.normal) * self.normal))
+            self.v = normalize(np.cross(self.u, self.normal))
+        else:
+            self.u = u
+            self.v = v
         self.scale_u = scale_u
         self.scale_v = scale_v
 
     def getDiffuse(self, intersection=None):
-        return self.getAmbient(intersection) / AMBIENT_MULTIPLE
+        return self.getAmbient(intersection)
 
     def getSpecular(self, intersection=None):
         return self.getAmbient(intersection)
@@ -252,7 +280,7 @@ class TexturedPlane(Plane):
 
         pixel = self.image.get_at((img_x, img_y))[:-1]
 
-        return vec(list(map(lambda x: x / 255.0, pixel))) * AMBIENT_MULTIPLE
+        return vec(list(map(lambda x: x / 255.0, pixel)))
 
 
 class Ellipsoids(Object3D):
@@ -402,23 +430,139 @@ class Cube(Object3D):
 
 
 class TexturedCube(Cube):
-    def __init__(self, pos, forward, up, length, front, left, right, back, up_t, down):
+    def __init__(
+        self,
+        pos,
+        forward,
+        up,
+        length,
+        front,
+        left,
+        right,
+        back,
+        up_t,
+        down,
+        cube_aligned=True,
+        scale_u=1.0,
+        scale_v=1.0,
+    ):
         super().__init__(
             pos,
             forward,
             up,
             length,
-            Material((1.0, 1.0, 1.0), (1.0, 1.0, 1.0), (1.0, 1.0, 1.0), 0, 0),
+            Material(
+                (1.0, 1.0, 1.0),
+                (1.0, 1.0, 1.0),
+                (1.0, 1.0, 1.0),
+                shine=1,
+                specCoeff=0.01,
+            ),
         )
         hl = self.length / 2
-        self.planes = [
-            TexturedPlane(self.x_axis, pos + self.x_axis * hl, left),
-            TexturedPlane(-self.x_axis, pos - self.x_axis * hl, down),
-            TexturedPlane(self.y_axis, pos + self.y_axis * hl, up_t),
-            TexturedPlane(-self.y_axis, pos - self.y_axis * hl, right),
-            TexturedPlane(self.z_axis, pos + self.z_axis * hl, front),
-            TexturedPlane(-self.z_axis, pos - self.z_axis * hl, back),
-        ]
+        self.hittable = False
+        if cube_aligned:
+            self.planes = [
+                TexturedPlane(
+                    self.x_axis,
+                    pos + self.x_axis * hl,
+                    left,
+                    u=self.z_axis,
+                    v=self.y_axis,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    -self.x_axis,
+                    pos - self.x_axis * hl,
+                    down,
+                    u=self.z_axis,
+                    v=self.y_axis,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    self.y_axis,
+                    pos + self.y_axis * hl,
+                    up_t,
+                    u=self.x_axis,
+                    v=self.z_axis,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    -self.y_axis,
+                    pos - self.y_axis * hl,
+                    right,
+                    u=self.x_axis,
+                    v=self.z_axis,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    self.z_axis,
+                    pos + self.z_axis * hl,
+                    front,
+                    u=self.x_axis,
+                    v=self.y_axis,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    -self.z_axis,
+                    pos - self.z_axis * hl,
+                    back,
+                    u=self.x_axis,
+                    v=self.y_axis,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+            ]
+        else:
+            self.planes = [
+                TexturedPlane(
+                    self.x_axis,
+                    pos + self.x_axis * hl,
+                    left,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    -self.x_axis,
+                    pos - self.x_axis * hl,
+                    down,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    self.y_axis,
+                    pos + self.y_axis * hl,
+                    up_t,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    -self.y_axis,
+                    pos - self.y_axis * hl,
+                    right,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    self.z_axis,
+                    pos + self.z_axis * hl,
+                    front,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+                TexturedPlane(
+                    -self.z_axis,
+                    pos - self.z_axis * hl,
+                    back,
+                    scale_u=scale_u,
+                    scale_v=scale_v,
+                ),
+            ]
 
 
 class CubeTextured3D(Cube):

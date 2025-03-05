@@ -460,7 +460,6 @@ class TexturedCube(Cube):
             ),
         )
         hl = self.length / 2
-        self.hittable = False
         if cube_aligned:
             self.planes = [
                 TexturedPlane(

@@ -51,7 +51,9 @@ class Scene(object):
     def shadowed(self, obj, ray):
         """Returns the nearest collision object and the distance to the object,
         excluding obj."""
-        distances = [o.intersect(ray) for o in self.objects if o is not obj]
+        distances = [
+            o.intersect(ray) for o in self.objects if o is not obj and o.hittable
+        ]
         minDistance = np.inf
         for i in range(len(distances)):
             if distances[i] < minDistance:

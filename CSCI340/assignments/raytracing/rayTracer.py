@@ -166,7 +166,7 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        self.scene.objects = [dice]
+        self.scene.objects = [sky, eye, earth, dice]
         self.scene.lights = [light]
 
     def getColorR(self, ray: Ray):
@@ -199,13 +199,12 @@ class RayTracer(ProgressiveRenderer):
                 color += diffuse
                 reflection_vector = normalize(light_vector - ray.direction)
 
-                if obj.material.shine != 0.0:
-                    specular = (obj.getSpecular(intersection) - color) * (
-                        (np.dot(reflection_vector, object_normal) ** obj.getShine())
-                        * obj.getSpecularCoefficient()
-                    )
+                specular = (obj.getSpecular(intersection) - color) * (
+                    (np.dot(reflection_vector, object_normal) ** obj.getShine())
+                    * obj.getSpecularCoefficient()
+                )
 
-                    color += specular * obj.hittable
+                color += specular * obj.hittable
 
         if obj.material.getRecursiveRay() and self.recurse_level < RECURSIVE_RAY_LIMIT:
             self.recurse_level += 1
@@ -255,7 +254,6 @@ class RayTracer(ProgressiveRenderer):
             reflection_vector = (
                 ray.direction - 2 * np.dot(ray.direction, object_normal) * object_normal
             )
-            reflection_vector = normalize(reflection_vector)
 
             # bigger epsilon
             reflection_ray = Ray(

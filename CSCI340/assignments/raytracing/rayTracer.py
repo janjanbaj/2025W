@@ -40,7 +40,7 @@ RECURSIVE_RAY_LIMIT = 9
 class RayTracer(ProgressiveRenderer):
     def __init__(self, width=600, height=900, show=ShowTypes.PerColumn):
         super().__init__(width, height, show=show)
-        self.fog = vec(0.605, 0.7, 0.809)
+        self.fog = vec(0.705, 0.8, 0.909)
         self.scene = Scene(aspect=width / height, fov=35.0)
         self.recurse_level = 0
         self.enter_index = 1.0
@@ -61,18 +61,18 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        # floor = TexturedPlane(
-        #    vec(0, 1, 0),
-        #    vec(0, -1, 0),
-        #    "./textures/floor.png",
-        #    scale_u=2.0,
-        #    scale_v=2.0,
-        # )
+        floor = TexturedPlane(
+            vec(0, 1, 0),
+            vec(0, -1, 0),
+            "./textures/floor.png",
+            scale_u=2.0,
+            scale_v=2.0,
+        )
 
         sky = PlaneTextured3D(
             vec(0, -21, 0),
             vec(0, 5, -1),
-            Material3D(lambda x, y, z: nm.clouds3D(x, y, z, c1=self.fog), 0, 0),
+            Material3D(lambda x, y, z: nm.clouds3D(x, y, z, c1=self.fog * 0.8), 0, 0),
         )
 
         cube1 = Cube(
@@ -166,7 +166,7 @@ class RayTracer(ProgressiveRenderer):
             ),
         )
 
-        self.scene.objects = [sky, eye, earth, dice]
+        self.scene.objects = [sky, sphere_mirror, eye, earth, dice, floor]
         self.scene.lights = [light]
 
     def getColorR(self, ray: Ray):
@@ -183,7 +183,11 @@ class RayTracer(ProgressiveRenderer):
         object_normal = normalize(obj.getNormal(intersection))
 
         # the light energy given off ie. the diffuse amt is proportional to the cosine
-        color = obj.getAmbient(intersection) * obj.hittable
+
+        if obj.hittable is False:
+            return obj.getAmbient(intersection)
+
+        color = obj.getAmbient(intersection)
 
         for l in self.scene.lights:
             light_vector = l.getVectorToLight(intersection)

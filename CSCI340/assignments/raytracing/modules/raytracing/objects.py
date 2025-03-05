@@ -148,7 +148,7 @@ class TexturedSphere(Sphere):
 
         return
 
-    def getAmbient(self, intersection=None):
+    def getDiffuse(self, intersection=None):
         d = intersection - self.position
         d = normalize(
             np.array(
@@ -167,13 +167,13 @@ class TexturedSphere(Sphere):
 
         pixel = self.image.get_at((img_x, img_y))[:-1]
 
-        return vec(list(map(lambda x: x / 255.0, pixel))) * AMBIENT_MULTIPLE
+        return vec(list(map(lambda x: x / 255.0, pixel)))
 
-    def getDiffuse(self, intersection=None):
-        return self.getAmbient(intersection) / AMBIENT_MULTIPLE
+    def getAmbient(self, intersection=None):
+        return self.getDiffuse(intersection)
 
     def getSpecular(self, intersection=None):
-        return self.getAmbient(intersection)
+        return self.getDiffuse(intersection)
 
 
 class SphereTextured3D(Sphere):
@@ -260,13 +260,13 @@ class TexturedPlane(Plane):
         self.scale_u = scale_u
         self.scale_v = scale_v
 
-    def getDiffuse(self, intersection=None):
-        return self.getAmbient(intersection)
+    def getAmbient(self, intersection=None):
+        return self.getDiffuse(intersection)
 
     def getSpecular(self, intersection=None):
         return self.getAmbient(intersection)
 
-    def getAmbient(self, intersection=None):
+    def getDiffuse(self, intersection=None):
         p = intersection - self.position
 
         coord_u = np.dot(self.u, p) - 0.5
@@ -394,6 +394,9 @@ class Cube(Object3D):
     def getAmbient(self, intersection=None):
         return self.last_intersection.getAmbient(intersection)
 
+    def getDiffuse(self, intersection=None):
+        return self.last_intersection.getAmbient(intersection)
+
     def intersect(self, ray: Ray):
         entries = 0
         maxEntry = -np.inf
@@ -460,6 +463,7 @@ class TexturedCube(Cube):
             ),
         )
         hl = self.length / 2
+        self.hittable = False
         if cube_aligned:
             self.planes = [
                 TexturedPlane(

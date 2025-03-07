@@ -261,7 +261,7 @@ class TexturedPlane(Plane):
         self.scale_v = scale_v
 
     def getAmbient(self, intersection=None):
-        return self.getDiffuse(intersection)
+        return self.getDiffuse(intersection) * AMBIENT_MULTIPLE
 
     def getSpecular(self, intersection=None):
         return self.getAmbient(intersection)
@@ -395,7 +395,7 @@ class Cube(Object3D):
         return self.last_intersection.getAmbient(intersection)
 
     def getDiffuse(self, intersection=None):
-        return self.last_intersection.getAmbient(intersection)
+        return self.last_intersection.getDiffuse(intersection)
 
     def intersect(self, ray: Ray):
         entries = 0

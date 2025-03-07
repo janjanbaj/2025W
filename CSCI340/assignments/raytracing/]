@@ -40,7 +40,7 @@ RECURSIVE_RAY_LIMIT = 9
 class RayTracer(ProgressiveRenderer):
     def __init__(self, width=600, height=900, show=ShowTypes.PerColumn):
         super().__init__(width, height, show=show)
-        self.fog = vec(0.627, 0.827, 0.929)
+        self.fog = vec(0.705, 0.8, 0.909)
         self.scene = Scene(aspect=width / height, fov=35.0)
         self.recurse_level = 0
         self.enter_index = 1.0
@@ -60,9 +60,8 @@ class RayTracer(ProgressiveRenderer):
         sky = PlaneTextured3D(
             vec(0, -21, 0),
             vec(0, 5, -1),
-            Material3D(lambda x, y, z: nm.clouds3D(x, y, z, c1=self.fog * 1.0), 0, 0),
+            Material3D(lambda x, y, z: nm.clouds3D(x, y, z, c1=self.fog * 0.8), 0, 0),
         )
-        sky.hittable = False
 
         cube1 = Cube(
             vec(-1.5, 2, -4),
@@ -131,8 +130,8 @@ class RayTracer(ProgressiveRenderer):
         )
 
         sphere_mirror = Sphere(
-            0.65,
-            vec(1.2, 1, -3),
+            1.25,
+            vec(0, 1, -2),
             MaterialMirror(
                 vec(0.5, 0.5, 0.5),
                 vec(0.5, 0.5, 0.5),
@@ -141,8 +140,10 @@ class RayTracer(ProgressiveRenderer):
         )
 
         refractive_sphere = Sphere(
-            0.65,
-            vec(0, 1, -3),
+            3.1,
+            self.scene.camera.getPosition()
+            - (4 * self.scene.camera.fwd)
+            + (5 * self.scene.camera.up),
             MaterialRefractive(
                 vec(0.5, 0.5, 0.5),
                 vec(0.5, 0.5, 0.5),
@@ -150,9 +151,8 @@ class RayTracer(ProgressiveRenderer):
                 refractive_index=1.23,
             ),
         )
-        floor.hittable = True
 
-        self.scene.objects = [sky, cube1, floor, refractive_sphere, sphere_mirror, eye]
+        self.scene.objects = [dice, sphere_mirror, eye, earth, floor, sky]
         self.scene.lights = [light]
 
     def getColorR(self, ray: Ray):
@@ -170,16 +170,18 @@ class RayTracer(ProgressiveRenderer):
 
         # the light energy given off ie. the diffuse amt is proportional to the cosine
 
-        if not obj.hittable:
-            return obj.getDiffuse(intersection)
+        if obj.hittable is False:
+            return obj.getAmbient(intersection)
 
         color = obj.getAmbient(intersection)
 
         for l in self.scene.lights:
             light_vector = l.getVectorToLight(intersection)
 
-            if self.scene.shadowed(obj, Ray(l.point, -light_vector)) >= l.getDistance(
-                intersection
+            if (
+                self.scene.shadowed(obj, Ray(l.point, -light_vector))
+                >= l.getDistance(intersection)
+                and obj.hittable
             ):
                 # only do this if not blocked
                 diffuse = (obj.getDiffuse(intersection) - color) * max(
@@ -194,12 +196,11 @@ class RayTracer(ProgressiveRenderer):
                     * obj.getSpecularCoefficient()
                 )
 
-                color += specular
+                color += specular * obj.hittable
 
         if obj.material.getRecursiveRay() and self.recurse_level < RECURSIVE_RAY_LIMIT:
             self.recurse_level += 1
 
-            # per the slides simplified because j = a -i and j -i = a -2 i:
             reflection_vector = (
                 ray.direction - 2 * np.dot(ray.direction, object_normal) * object_normal
             )
@@ -247,31 +248,30 @@ class RayTracer(ProgressiveRenderer):
 
                     new_ray = Ray(intersection + (0.01 * u_t), u_t)
 
-                self.recurse_level += 1
-
                 refractive_color = self.getColorR(new_ray)
 
                 self.recurse_level -= 1
 
                 refractive_color = lerp(
-                    obj.getAmbient(), refractive_color, obj.material.transparency_factor
+                    obj.getDiffuse(), color, obj.material.transparency_factor
+                )
+                return lerp(
+                    reflecton_color, refractive_color, ((n_r - n_t) / (n_r + n_t)) ** 2
+            reflection_vector = (
+                ray.direction - 2 * np.dot(ray.direction, object_normal) * object_normal
+            )
+
+            # bigger epsilon
+            reflection_ray = Ray(
+                (intersection + (0.001 * reflection_vector)), reflection_vector
+            )
+            r_color = self.getColorR(reflection_ray)
+
+            self.recurse_level -= 1
                 )
 
-                # cos_theta = max(
-                #    [np.dot(u_r, -n), np.dot(new_ray.direction, -n)],
-                #    key=lambda x: np.arccos(x),
-                # )
-
-                R_0 = ((n_r - n_t) / (n_r + n_t)) ** 2
-
-                R_theta = R_0 + (
-                    (1 - R_0)
-                    * ((1 - np.abs(np.dot(ray.direction, object_normal))) ** 5)
-                )
-
-                return lerp(refractive_color, reflecton_color, R_theta)
-            else:
-                return lerp(color, reflecton_color, obj.material.reflective_factor)
+            # per the slides simplified because j = a -i and j -i = a -2 i:
+            return lerp(color, r_color, obj.material.reflective_factor)
 
         return color
 

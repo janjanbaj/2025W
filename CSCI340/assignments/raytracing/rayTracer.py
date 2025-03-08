@@ -33,16 +33,16 @@ from modules.raytracing.materials import (
 from modules.raytracing.scene import Scene
 from modules.utils.vector import lerp, normalize, vec
 from modules.raytracing.ray import Ray
+from quilt import *
 
 RECURSIVE_RAY_LIMIT = 9
 
 
 class RayTracer(ProgressiveRenderer):
-    def __init__(self, width=600, height=900, show=ShowTypes.PerColumn):
+    def __init__(self, width=800, height=800, show=ShowTypes.PerColumn):
         super().__init__(width, height, show=show)
         self.fog = vec(0.627, 0.827, 0.929)
         self.scene = Scene(aspect=width / height, fov=35.0)
-        self.recurse_level = 0
         self.enter_index = 1.0
 
         self.nm = nm = NoisePatterns()
@@ -100,24 +100,18 @@ class RayTracer(ProgressiveRenderer):
             vec(0, -1, 0),
             vec(0, -1, 0),
         )
-        right = normalize(np.cross(self.scene.camera.up, self.scene.camera.fwd))
 
         dice = TexturedCube(
-            self.scene.camera.getPosition()
-            - (2 * self.scene.camera.fwd)
-            + (1 * self.scene.camera.up)
-            + (4 * right),
-            vec(0, 1, 0),
-            vec(0, 0, 1),
-            3.0,
+            vec(-1, 1.2, -5),
+            vec(0.3, 2, 0),
+            vec(0.5, 0, 1),
+            1.0,
             "./die/die1.png",
             "./die/die2.png",
             "./die/die3.png",
             "./die/die4.png",
             "./die/die5.png",
             "./die/die6.png",
-            scale_u=0.9,
-            scale_v=0.9,
         )
 
         eye = TexturedSphere(
@@ -141,8 +135,8 @@ class RayTracer(ProgressiveRenderer):
         )
 
         refractive_sphere = Sphere(
-            0.65,
-            vec(0, 1, -3),
+            0.35,
+            vec(0, 0.4, -3),
             MaterialRefractive(
                 vec(0.5, 0.5, 0.5),
                 vec(0.5, 0.5, 0.5),
@@ -152,10 +146,10 @@ class RayTracer(ProgressiveRenderer):
         )
         floor.hittable = True
 
-        self.scene.objects = [sky, cube1, floor, refractive_sphere, sphere_mirror, eye]
+        self.scene.objects = [sky, floor, refractive_sphere, sphere_mirror, eye, dice]
         self.scene.lights = [light]
 
-    def getColorR(self, ray: Ray):
+    def getColorR(self, ray: Ray, r_level=0):
         # Find any objects it collides with and calculate color
 
         obj, distance_to_obj = self.scene.nearestObject(ray)
@@ -196,9 +190,7 @@ class RayTracer(ProgressiveRenderer):
 
                 color += specular
 
-        if obj.material.getRecursiveRay() and self.recurse_level < RECURSIVE_RAY_LIMIT:
-            self.recurse_level += 1
-
+        if obj.material.getRecursiveRay() and r_level < RECURSIVE_RAY_LIMIT:
             # per the slides simplified because j = a -i and j -i = a -2 i:
             reflection_vector = (
                 ray.direction - 2 * np.dot(ray.direction, object_normal) * object_normal
@@ -208,9 +200,7 @@ class RayTracer(ProgressiveRenderer):
             reflection_ray = Ray(
                 (intersection + (0.001 * reflection_vector)), reflection_vector
             )
-            reflecton_color = self.getColorR(reflection_ray)
-
-            self.recurse_level -= 1
+            reflecton_color = self.getColorR(reflection_ray, r_level + 1)
 
             if obj.material.getRefractive():
                 n_r = 1.0
@@ -247,11 +237,7 @@ class RayTracer(ProgressiveRenderer):
 
                     new_ray = Ray(intersection + (0.01 * u_t), u_t)
 
-                self.recurse_level += 1
-
-                refractive_color = self.getColorR(new_ray)
-
-                self.recurse_level -= 1
+                refractive_color = self.getColorR(new_ray, r_level=r_level + 1)
 
                 refractive_color = lerp(
                     obj.getAmbient(), refractive_color, obj.material.transparency_factor
